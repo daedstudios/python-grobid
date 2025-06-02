@@ -1,0 +1,7 @@
+{
+    "grobid_server": "http://34.13.249.44:8080",
+    "batch_size": 100,
+    "sleep_time": 5,
+    "timeout": 4000,
+    "coordinates": [ "persName", "figure", "ref", "biblStruct", "formula", "s", "note", "title" ]
+}
