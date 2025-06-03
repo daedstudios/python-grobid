@@ -1,7 +1,6 @@
 {
-    "grobid_server": "http://34.13.249.44:8080",
-    "batch_size": 100,
+    "grobid_server": "https://grobid-347071481430.europe-west10.run.app",
+    "batch_size": 1,
     "sleep_time": 5,
-    "timeout": 4000,
-    "coordinates": [ "persName", "figure", "ref", "biblStruct", "formula", "s", "note", "title" ]
+    "timeout": 4000
 }

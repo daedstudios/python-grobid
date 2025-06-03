@@ -18,6 +18,7 @@ import fitz  # PyMuPDF
 import cv2
 import numpy as np
 from PIL import Image
+from app.extract import extract_divs_to_json
 
 # Configure logging
 logging.basicConfig(
@@ -65,14 +66,30 @@ def process_grobid(id: UUID):
             f.write(response.content)
         
         client = GrobidClient(config_path="./config.json", check_server=False)
-        client.process("processFulltextDocument", "./test_pdf", output="./test_pdf/", 
-                      consolidate_citations=True, tei_coordinates=True, force=True, n=20)
+        client.process("processFulltextDocument", "./test_pdf", output="./test_pdf/", force=True, verbose=True)
         
-        return {
-            "message": "PDF downloaded successfully",
-            "data": data,
-            "local_file_path": local_file_path
-        }
+        # Process the TEI output
+        tei_file_path = local_file_path.replace('.pdf', '.grobid.tei.xml')
+        if os.path.exists(tei_file_path):
+            logger.info(f"Processing TEI file: {tei_file_path}")
+            extract_result = extract_divs_to_json(
+                tei_file_path=tei_file_path,
+                paper_summary_id=str(id)
+            )
+            
+            if not extract_result['success']:
+                logger.error(f"Failed to process TEI: {extract_result['message']}")
+                return None
+            
+            return {
+                "message": "PDF processed and data extracted successfully",
+                "data": data,
+                "local_file_path": local_file_path,
+                "extraction_result": extract_result
+            }
+        else:
+            logger.error(f"TEI file not found: {tei_file_path}")
+            return None
     
     except Exception as e:
         print(f"Error: Failed to download PDF: {str(e)}")
@@ -92,6 +109,4 @@ if __name__ == "__main__":
     except ValueError:
         print("Error: Invalid UUID format")
         sys.exit(1)
-        
     
-        
