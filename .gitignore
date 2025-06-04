@@ -32,3 +32,5 @@ htmlcov/
 
 # Project specific
 clean_grobid
+
+documents/

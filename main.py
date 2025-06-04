@@ -3,10 +3,8 @@ from grobid_client.grobid_client import GrobidClient
 from typing import Union
 from uuid import UUID
 import uuid
-import argparse
-import sys
 import logging
-
+from fastapi import FastAPI, HTTPException
 from bs4 import BeautifulSoup
 import json
 import os
@@ -18,7 +16,8 @@ import fitz  # PyMuPDF
 import cv2
 import numpy as np
 from PIL import Image
-from app.extract import extract_divs_to_json
+from .app.extract import extract_divs_to_json
+from fastapi.middleware.cors import CORSMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -52,10 +51,12 @@ def process_grobid(id: UUID):
         print("Error: PDF file path not found in the record")
         return None
     
-    os.makedirs("./test_pdf", exist_ok=True)
+    # Create directory based on document ID
+    doc_dir = f"./documents/{str(id)}"
+    os.makedirs(doc_dir, exist_ok=True)
     
     file_name = os.path.basename(pdf_file_path)
-    local_file_path = os.path.join("./test_pdf", file_name)
+    local_file_path = os.path.join(doc_dir, file_name)
     
     try:
         import requests
@@ -66,7 +67,7 @@ def process_grobid(id: UUID):
             f.write(response.content)
         
         client = GrobidClient(config_path="./config.json", check_server=False)
-        client.process("processFulltextDocument", "./test_pdf", output="./test_pdf/", force=True, verbose=True)
+        client.process("processFulltextDocument", doc_dir, output=f"{doc_dir}/", force=True, verbose=True)
         
         # Process the TEI output
         tei_file_path = local_file_path.replace('.pdf', '.grobid.tei.xml')
@@ -95,18 +96,27 @@ def process_grobid(id: UUID):
         print(f"Error: Failed to download PDF: {str(e)}")
         return None
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process PDF files with GROBID')
-    parser.add_argument('id', type=str, help='UUID of the document to process')
-    
-    args = parser.parse_args()
-    
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
+@app.get("/process/{id}")
+async def process_document(id: str):
     try:
-        document_id = UUID(args.id)
+        document_id = UUID(id)
         result = process_grobid(document_id)
         if result:
-            print(json.dumps(result, default=str, indent=2))
+            return result
+        else:
+            raise HTTPException(status_code=404, detail="Processing failed")
     except ValueError:
-        print("Error: Invalid UUID format")
-        sys.exit(1)
-    
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
