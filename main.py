@@ -13,7 +13,7 @@ from supabase import create_client, Client
 import datetime  
 
 import fitz  # PyMuPDF
-import cv2
+# import cv2
 import numpy as np
 from PIL import Image
 from .app.extract import extract_divs_to_json
