@@ -1,29 +1,13 @@
-# Use Python 3.12 image
-FROM python:3.12-slim
+FROM python:3.9
 
-# Set working directory
-WORKDIR /app
+WORKDIR /code
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    python3-dev \
-    && rm -rf /var/lib/apt/lists/*
+COPY ./req.txt /code/requirements.txt
 
-# Copy requirements first to leverage Docker cache
-COPY req.txt .
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r req.txt
+COPY . /code/
 
-# Copy the rest of the application
-COPY . .
-
-# Create directories for documents
-RUN mkdir -p documents
-
-# Expose the port the app runs on
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["fastapi", "run", "main.py", "--port", "8000"]
