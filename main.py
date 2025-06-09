@@ -19,6 +19,8 @@ import numpy as np
 from PIL import Image
 from .app.extract import extract_divs_to_json
 from fastapi.middleware.cors import CORSMiddleware
+from .app.figure_extractor import extract_and_upload_figures
+# from app.utilities.uti import download_file,clean_text
 
 # Configure logging
 logging.basicConfig(
@@ -171,5 +173,82 @@ async def process_document(id: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format")
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/images/{id}")
+async def process_document_images(id: str, bucket_name: str = "figure-images"):
+    """
+    Extract figures and tables from a PDF document and upload them to Supabase storage.
+    
+    Args:
+        id: The UUID of the paper to process
+        bucket_name: The Supabase storage bucket name (default: "paper-figures")
+        
+    Returns:
+        JSON object with extraction results
+    """
+    try:
+        document_id = UUID(id)
+        
+        # Check if the document exists in the database
+        response = supabase.table("PaperMainStructure").select("*").eq("id", str(document_id)).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail=f"Document with ID {id} not found")
+        
+        # Get the PDF URL from the database
+        pdf_url = response.data[0].get("pdf_file_path")
+        if not pdf_url:
+            raise HTTPException(status_code=404, detail="PDF file path not found in the database record")
+        
+        # Create document directory path
+        doc_dir = f"./documents/{str(document_id)}"
+        
+        # Create the directory if it doesn't exist
+        os.makedirs(doc_dir, exist_ok=True)
+        
+        # Download the PDF if needed
+        file_name = os.path.basename(pdf_url)
+        local_file_path = os.path.join(doc_dir, file_name)
+        download_success, error_message = download_file(pdf_url, local_file_path, doc_dir)
+        
+        if not download_success:
+            raise HTTPException(status_code=500, detail=f"Failed to download PDF: {error_message}")
+        
+        # Extract figures and tables and upload them to Supabase
+        logger.info(f"Starting figure and table extraction for document {id}")
+        results = extract_and_upload_figures(str(document_id), bucket_name)
+        
+        if not results:
+            return {
+                "success": False,
+                "message": "No figures or tables were extracted from the document",
+                "document_id": str(document_id),
+                "count": 0
+            }
+        
+        return {
+            "success": True,
+            "message": f"Successfully extracted {len(results)} figures and tables",
+            "document_id": str(document_id),
+            "count": len(results),
+            "figures": [
+                {
+                    "id": item.get("id"),
+                    "figure_type": item.get("figure_type"),
+                    "figure_id": item.get("figure_id"),
+                    "page_number": item.get("page_number"),
+                    "head": item.get("head", "")[:100] + ("..." if len(item.get("head", "")) > 100 else ""),  # Truncate long headings
+                    "image_url": item.get("image_url")
+                }
+                for item in results
+            ]
+        }
+        
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error processing images: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 

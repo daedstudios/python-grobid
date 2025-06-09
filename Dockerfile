@@ -1,10 +1,10 @@
 FROM frostpunk/layoutparser-detector
 
-WORKDIR /app
+WORKDIR /code
 
-COPY ./req.txt /app/requirements.txt
+COPY ./req.txt /code/requirements.txt
 
-RUN pip install -r /app/requirements.txt
+RUN pip install -r /code/requirements.txt
 
 RUN pip install --force-reinstall --no-cache-dir pillow==9.5.0
 
@@ -12,6 +12,6 @@ RUN python -c "import layoutparser as lp; lp.Detectron2LayoutModel('lp://PubLayN
 
 EXPOSE 8000
 
-COPY . /app/
+COPY . /code/
 
 CMD ["fastapi", "run", "main.py", "--port", "8000"]

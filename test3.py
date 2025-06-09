@@ -6,9 +6,20 @@ max_heading_height = 200
 import pytesseract
 
 import layoutparser as lp
+from dotenv import load_dotenv
+
+from supabase import create_client, Client
 
 from pdf2image import convert_from_path
 import os
+
+
+load_dotenv()
+
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
+
 
 # Replace with your PDF path
 pdf_path = "test.pdf"
@@ -36,6 +47,8 @@ for i, page in enumerate(pages):
     layout = model.detect(page)
     figures = [b for b in layout if b.type == "Figure"]
     text_blocks = [b for b in layout if b.type == "Text"]
+    
+    table_blocks = [b for b in layout if b.type == "Table"]
 
     for j, fig in enumerate(figures):
         fig_img = page.crop(fig.coordinates)
@@ -83,3 +96,7 @@ for i, page in enumerate(pages):
             "heading": heading_text.strip(),
             "caption": caption_text.strip()
         })
+
+    for j, block in enumerate(table_blocks):
+        table_image = page.crop(block.coordinates)
+        table_image.save(f"output/page_{i}_table_{j}.png")
