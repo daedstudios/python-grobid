@@ -11,12 +11,6 @@ build/
 *.egg-info/
 *.egg
 
-# Virtual environments
-/venv
-/env
-/.venv
-/.env
-.env
 
 # Testing
 .pytest_cache/
