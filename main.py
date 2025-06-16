@@ -21,6 +21,7 @@ from .app.extract import extract_divs_to_json
 from fastapi.middleware.cors import CORSMiddleware
 from .app.figure_extractor import extract_and_upload_figures
 from .app.extract_ref import process_references
+from .app.extract_note import process_notes
 # from app.utilities.uti import download_file,clean_text
 
 # Configure logging
@@ -151,12 +152,26 @@ def process_grobid(id: UUID):
             else:
                 logger.info(f"Successfully processed {references_result['count']} references")
             
+            # Process and extract notes (footnotes, endnotes) from TEI file
+            logger.info("Extracting notes from TEI file")
+            notes_result = process_notes(
+                tei_file_path=tei_file_path,
+                paper_summary_id=str(id)
+            )
+            
+            if not notes_result['success']:
+                logger.warning(f"Failed to process notes: {notes_result['message']}")
+                # Continue even if notes processing fails
+            else:
+                logger.info(f"Successfully processed {notes_result['count']} notes")
+            
             return {
                 "message": "PDF processed and data extracted successfully",
                 "data": data,
                 "local_file_path": local_file_path,
                 "extraction_result": extract_result,
-                "references_result": references_result if 'references_result' in locals() else None
+                "references_result": references_result if 'references_result' in locals() else None,
+                "notes_result": notes_result if 'notes_result' in locals() else None
             }
         else:
             logger.error(f"TEI file not found: {tei_file_path}")
