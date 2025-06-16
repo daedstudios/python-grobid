@@ -20,6 +20,7 @@ from PIL import Image
 from .app.extract import extract_divs_to_json
 from fastapi.middleware.cors import CORSMiddleware
 from .app.figure_extractor import extract_and_upload_figures
+from .app.extract_ref import process_references
 # from app.utilities.uti import download_file,clean_text
 
 # Configure logging
@@ -137,11 +138,25 @@ def process_grobid(id: UUID):
                 logger.error(f"Failed to process TEI: {extract_result['message']}")
                 return None
             
+            # Process and add references to Supabase
+            logger.info("Extracting bibliographic references from TEI file")
+            references_result = process_references(
+                tei_file_path=tei_file_path,
+                paper_summary_id=str(id)
+            )
+            
+            if not references_result['success']:
+                logger.warning(f"Failed to process references: {references_result['message']}")
+                # Continue even if references processing fails
+            else:
+                logger.info(f"Successfully processed {references_result['count']} references")
+            
             return {
                 "message": "PDF processed and data extracted successfully",
                 "data": data,
                 "local_file_path": local_file_path,
-                "extraction_result": extract_result
+                "extraction_result": extract_result,
+                "references_result": references_result if 'references_result' in locals() else None
             }
         else:
             logger.error(f"TEI file not found: {tei_file_path}")
