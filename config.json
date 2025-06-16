@@ -1,5 +1,5 @@
 {
-    "grobid_server": "https://grobid-347071481430.europe-west10.run.app",
+    "grobid_server": "https://grobid-lg-347071481430.europe-west1.run.app",
     "batch_size": 1,
     "sleep_time": 5,
     "timeout": 4000
