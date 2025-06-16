@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .app.figure_extractor import extract_and_upload_figures
 from .app.extract_ref import process_references
 from .app.extract_note import process_notes
+from .app.extract_xml_figures import process_figures
 # from app.utilities.uti import download_file,clean_text
 
 # Configure logging
@@ -165,13 +166,27 @@ def process_grobid(id: UUID):
             else:
                 logger.info(f"Successfully processed {notes_result['count']} notes")
             
+            # Process and extract figures from TEI file
+            logger.info("Extracting figures from XML")
+            figures_result = process_figures(
+                tei_file_path=tei_file_path,
+                paper_summary_id=str(id)
+            )
+            
+            if not figures_result['success']:
+                logger.warning(f"Failed to process figures from XML: {figures_result['message']}")
+                # Continue even if figure processing fails
+            else:
+                logger.info(f"Successfully processed {figures_result['count']} figures from XML")
+            
             return {
                 "message": "PDF processed and data extracted successfully",
                 "data": data,
                 "local_file_path": local_file_path,
                 "extraction_result": extract_result,
                 "references_result": references_result if 'references_result' in locals() else None,
-                "notes_result": notes_result if 'notes_result' in locals() else None
+                "notes_result": notes_result if 'notes_result' in locals() else None,
+                "figures_result": figures_result if 'figures_result' in locals() else None
             }
         else:
             logger.error(f"TEI file not found: {tei_file_path}")
