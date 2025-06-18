@@ -79,9 +79,9 @@ def extract_divs_to_json(tei_file_path, paper_summary_id: str):
                 # Extract references in paragraph
                 refs = p.find_all('ref')
                 ref_markers = {}
-                
                 # Create mapping of reference positions
                 for ref in refs:
+                    ref_target = ref.get('target', '')
                     ref_id = ref.get('coords', '')
                     ref_type = ref.get('type', '')
                     ref_text = ref.text
@@ -89,7 +89,9 @@ def extract_divs_to_json(tei_file_path, paper_summary_id: str):
                     # Store reference information with its text as identifier
                     ref_markers[ref_text] = {
                         'id': ref_id,
-                        'type': ref_type
+                        'type': ref_type,
+                        'target': ref_target,
+                        'text': ref_text
                     }
                 
                 # Add paragraph text with reference information
